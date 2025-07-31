@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>なにいろ？ - 野菜の色あてゲーム</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #game-container {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 550px;
+            width: 100%;
+            display: flex; /* Flexboxを使って内部要素の配置を制御 */
+            flex-direction: column;
+            justify-content: space-between; /* 上下均等に配置 */
+            min-height: 550px; /* ある程度の最小高さを確保してスクロールを抑制 */
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        #score-display {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 8px;
+        }
+
+        #vegetable-image-container {
+            flex-grow: 1; /* 残りのスペースを埋める */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 25px;
+            /* min-heightは維持しつつ、画像がはみ出さないように調整 */
+            max-height: 250px; /* 画像コンテナの最大高さを設定 */
+            overflow: hidden; /* はみ出した画像を隠す */
+        }
+
+        #vegetable-image {
+            max-width: 90%;
+            max-height: 220px;
+            object-fit: contain; /* 画像がコンテナに収まるように調整 */
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            filter: grayscale(100%);
+        }
+
+        /* #question-text はHTMLから削除されるため、CSSは不要 */
+
+        #color-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+            gap: 10px;
+            margin-top: auto; /* ボタン群を下に配置 */
+            margin-bottom: 15px; /* feedbackとの間隔を調整 */
+        }
+
+        .color-button {
+            padding: 12px 18px;
+            font-size: 1.1em;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            color: #fff;
+            font-weight: bold;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .color-button:hover {
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
+
+        /* 各色のボタンのスタイル */
+        .color-button:not([data-color=""]) {
+            background-color: #f8f8f8;
+            color: #333;
+            border: 1px solid #ccc;
+        }
+        .color-button:hover {
+            background-color: #e0e0e0;
+        }
+
+        .color-button.red { background-color: #e74c3c; color: white; border: none; }
+        .color-button.orange { background-color: #f39c12; color: white; border: none; }
+        .color-button.green { background-color: #27ae60; color: white; border: none; }
+        .color-button.purple { background-color: #8e44ad; color: white; border: none; }
+        .color-button.yellow { background-color: #f1c40f; color: #333; border: none; }
+        .color-button.blue { background-color: #3498db; color: white; border: none; }
+        .color-button.white { background-color: #fff; color: #333; border: 1px solid #ccc; }
+        .color-button.black { background-color: #333; color: white; border: none; }
+        .color-button.brown { background-color: #a0522d; color: white; border: none; }
+        .color-button.lightgreen { background-color: #90ee90; color: #333; border: none; }
+
+
+        #feedback {
+            margin-top: 5px; /* next-buttonとの間隔を確保 */
+            font-size: 1.8em;
+            font-weight: bold;
+            min-height: 45px; /* 高さを確保してレイアウトのずれを抑制 */
+            display: flex; /* 中央揃えのため */
+            align-items: center;
+            justify-content: center;
+        }
+
+        .correct {
+            color: #28a745;
+        }
+
+        .incorrect {
+            color: #dc3545;
+        }
+
+        #next-button, #restart-button {
+            margin-top: 10px; /* feedbackとの間隔を確保 */
+            padding: 10px 20px;
+            font-size: 1.1em;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #next-button { display: none; }
+        #restart-button { display: block; }
+
+
+        #next-button:hover, #restart-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* ゲーム終了時の表示 */
+        #game-over-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 450px;
+            width: 100%;
+            min-height: 300px; /* ゲームオーバー画面も高さを確保 */
+        }
+
+        #game-over-screen h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        #final-score {
+            font-size: 2.2em;
+            color: #27ae60;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>なにいろ？</h1>
+        <div id="score-display">スコア: 0</div>
+        <div id="vegetable-image-container">
+            <img id="vegetable-image" src="" alt="野菜の絵">
+        </div>
+        <div id="color-options">
+            </div>
+        <div id="feedback"></div>
+        <button id="next-button">つぎへ</button>
+    </div>
+
+    <div id="game-over-screen">
+        <h2>おわり</h2>
+        <p>またちょうせんしてね！</p>
+        <div id="final-score"></div>
+        <button id="restart-button">もういちどプレイする</button>
+    </div>
+
+    <script>
+        const vegetables = [
+            { name: "ブロッコリー", image: "broccoli.png", correct_color: "green" },
+            { name: "白菜", image: "hakusai.png", correct_color: "lightgreen" },
+            { name: "きゅうり", image: "kyuuri_cucumber.png", correct_color: "green" },
+            { name: "なす", image: "nasu_eggplant.png", correct_color: "purple" },
+            { name: "ネギ", image: "negi_green_onion.png", correct_color: "white" },
+            { name: "にんじん", image: "ninjin_carrot.png", correct_color: "orange" }, // .jpg に戻す
+            { name: "ピーマン", image: "piman_greenpepper.png", correct_color: "green" },
+            { name: "サツマイモ", image: "satsumaimo_sweetpotato.png", correct_color: "purple" },
+            { name: "たけのこ", image: "takenoko_bamboo_shoot.png", correct_color: "brown" },
+            { name: "玉ねぎ", image: "tamanegi_onion (1).png", correct_color: "brown" },
+            { name: "トマト", image: "tomato_red.png", correct_color: "red" }, // .jpg に戻す
+            { name: "トウモロコシ", image: "vegetable_corn.png", correct_color: "yellow" }
+        ];
+
+        const MAX_QUESTIONS = 5; // 問題数
+        let score = 0;
+        let questionsPlayed = 0;
+        let availableVegetablesForGame = []; // このゲームで使う野菜のリスト（重複なし用）
+
+        const vegetableImage = document.getElementById('vegetable-image');
+        // const questionText = document.getElementById('question-text'); // 削除されたためコメントアウト
+        const colorOptionsContainer = document.getElementById('color-options');
+        const feedbackElement = document.getElementById('feedback');
+        const nextButton = document.getElementById('next-button');
+        const scoreDisplay = document.getElementById('score-display');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const restartButton = document.getElementById('restart-button');
+
+        const allColors = ["red", "orange", "green", "purple", "yellow", "blue", "white", "black", "brown", "lightgreen"];
+
+        // 配列をシャッフルする関数
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // ゲームを初期化する
+        function initializeGame() {
+            score = 0;
+            questionsPlayed = 0;
+            scoreDisplay.textContent = `スコア: 0`;
+            availableVegetablesForGame = shuffleArray([...vegetables]);
+
+            gameOverScreen.style.display = 'none';
+            document.getElementById('game-container').style.display = 'flex'; // display: flex に変更
+            nextButton.style.display = 'none';
+            feedbackElement.textContent = '';
+            feedbackElement.className = '';
+            loadQuestion();
+        }
+
+        // 次の問題をロードする
+        function loadQuestion() {
+            if (questionsPlayed >= MAX_QUESTIONS || availableVegetablesForGame.length === 0) {
+                endGame();
+                return;
+            }
+
+            colorOptionsContainer.innerHTML = '';
+            feedbackElement.textContent = '';
+            feedbackElement.className = '';
+            nextButton.style.display = 'none';
+
+            const randomIndex = Math.floor(Math.random() * availableVegetablesForGame.length);
+            const currentVegetable = availableVegetablesForGame.splice(randomIndex, 1)[0];
+            const correctColor = currentVegetable.correct_color;
+
+            vegetableImage.src = currentVegetable.image;
+            // questionText.textContent = `このやさいはなにいろ？`; // 削除されたためコメントアウト
+
+            const options = [correctColor];
+            const otherColors = allColors.filter(color => color !== correctColor);
+            shuffleArray(otherColors);
+
+            for (let i = 0; i < Math.min(2, otherColors.length); i++) {
+                options.push(otherColors[i]);
+            }
+            shuffleArray(options);
+
+            options.forEach(color => {
+                const button = document.createElement('button');
+                button.classList.add('color-button');
+                button.classList.add(color);
+                button.dataset.color = color;
+                button.textContent = getColorNameInJapanese(color);
+                button.addEventListener('click', () => checkAnswer(button, correctColor));
+                colorOptionsContainer.appendChild(button);
+            });
+
+            Array.from(colorOptionsContainer.children).forEach(button => {
+                button.disabled = false;
+            });
+
+            questionsPlayed++;
+        }
+
+        // 回答をチェックする
+        function checkAnswer(selectedButton, correctColor) {
+            Array.from(colorOptionsContainer.children).forEach(button => {
+                button.disabled = true;
+            });
+
+            const selectedColor = selectedButton.dataset.color;
+
+            if (selectedColor === correctColor) {
+                feedbackElement.textContent = 'せいかい！';
+                feedbackElement.classList.add('correct');
+                score += 10;
+            } else {
+                feedbackElement.textContent = `ざんねん！せいかいは「${getColorNameInJapanese(correctColor)}」でした。`;
+                feedbackElement.classList.add('incorrect');
+            }
+            scoreDisplay.textContent = `スコア: ${score}`;
+
+            nextButton.style.display = 'block';
+        }
+
+        // 日本語の色名を取得するヘルパー関数
+        function getColorNameInJapanese(color) {
+            switch (color) {
+                case "red": return "あか";
+                case "orange": return "おれんじ";
+                case "green": return "みどり";
+                case "purple": return "むらさき";
+                case "yellow": return "きいろ";
+                case "blue": return "あお";
+                case "white": return "しろ";
+                case "black": return "くろ";
+                case "brown": return "ちゃいろ";
+                case "lightgreen": return "きみどり";
+                default: return color;
+            }
+        }
+
+        // ゲームを終了する
+        function endGame() {
+            document.getElementById('game-container').style.display = 'none';
+            gameOverScreen.style.display = 'flex';
+            finalScoreDisplay.textContent = `とくてん: ${score}てん`;
+        }
+
+        // イベントリスナーの設定
+        nextButton.addEventListener('click', loadQuestion);
+        restartButton.addEventListener('click', initializeGame);
+
+        // ゲーム開始
+        initializeGame();
+    </script>
+</body>
+</html>
